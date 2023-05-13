@@ -37,6 +37,8 @@ void _travel(int idx) {
     }
 }
 
+void travel(int start);
+
 void *thread_travel(void *arg) {
     int start = *(int *)arg;
     travel(start);
