@@ -1,0 +1,77 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+
+int m[17][17];
+int min = -1;
+pthread_mutex_t mutex;
+
+void _travel(int idx, int* path, int* used, int length) {
+    int i;
+
+    if (idx == 17) {
+        length += m[path[16]][path[0]];
+        if (min == -1 || min > length) {
+            pthread_mutex_lock(&mutex);
+            min = length;
+            printf("%d (", length);
+            for (i = 0; i < 17; i++)
+                printf("%d ", path[i]);
+            printf("%d)\n", path[0]);
+            pthread_mutex_unlock(&mutex);
+        }
+        length -= m[path[16]][path[0]];
+    }
+    else {
+        for (i = 0; i < 17; i++) {
+            if (used[i] == 0) {
+                path[idx] = i;
+                used[i] = 1;
+                _travel(idx + 1, path, used, length + m[path[idx - 1]][i]);
+                used[i] = 0;
+            }
+        }
+    }
+}
+
+void* travel(void* arg) {
+    int start = *(int*)arg;
+    int path[17] = { 0 };
+    int used[17] = { 0 };
+    int length = 0;
+
+    path[0] = start;
+    used[start] = 1;
+    _travel(1, path, used, length);
+    used[start] = 0;
+
+    return NULL;
+}
+
+int main() {
+    int i, j, t;
+    pthread_t thread_id[17];
+    pthread_mutex_init(&mutex, NULL);
+
+    FILE* fp = fopen("gr17.tsp", "r");
+
+    for (i = 0; i < 17; i++) {
+        for (j = 0; j < 17; j++) {
+            fscanf(fp, "%d", &t);
+            m[i][j] = t;
+        }
+    }
+    fclose(fp);
+
+    for (i = 0; i < 17; i++) {
+        pthread_create(&thread_id[i], NULL, travel, (void*)&i);
+    }
+
+    for (i = 0; i < 17; i++) {
+        pthread_join(thread_id[i], NULL);
+    }
+
+    pthread_mutex_destroy(&mutex);
+
+    return 0;
+}
